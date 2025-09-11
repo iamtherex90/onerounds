@@ -364,6 +364,8 @@
         timer.startTime = null;
         timer.elapsed = 0;
         timer.pauseTime = null;
+        timer.date = new Date().toISOString().split('T')[0]; // Reset date to today
+        timer.time = ''; // Reset time to empty
         changed = true;
       }
       if (changed) updateWidgetDOM(id);
