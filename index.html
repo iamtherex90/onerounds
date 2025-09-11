@@ -336,7 +336,15 @@
       let changed = false;
       if (action === 'start') {
         timer.state = 'running';
-        timer.startTime = Date.now();
+        // Use configured date/time if present
+        let chosenDate = timer.date || new Date().toISOString().split('T')[0];
+        let chosenTime = timer.time && timer.time !== '--:--:--' ? timer.time : '00:00:00';
+        let startDateTime = new Date(`${chosenDate}T${chosenTime}`);
+        if (timer.date && timer.time && !isNaN(startDateTime.getTime())) {
+          timer.startTime = startDateTime.getTime();
+        } else {
+          timer.startTime = Date.now();
+        }
         timer.elapsed = 0;
         timer.pauseTime = null;
         changed = true;
