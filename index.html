@@ -67,29 +67,12 @@
       border-radius: 7px;
       outline: none;
       border: none;
-      transition: background 0.2s;
       min-width: 70px;
       flex: 1;
-      user-select: text;
+      user-select: none;
       max-width: 150px;
+      /* Static names, not editable */
     }
-    .timer-name[contenteditable] {
-      background: #FFD70022;
-      border: 2px solid #FFD700;
-      outline: 2px solid #FFD70044;
-      color: #222;
-    }
-    .rename-btn {
-      background: none;
-      border: none;
-      color: #FFD700;
-      font-size: 1.45em;
-      cursor: pointer;
-      transition: color 0.18s, transform 0.18s;
-      padding: 2px 6px;
-    }
-    .rename-btn:focus, .rename-btn:active { color: #bfa400; outline: none; }
-    .rename-btn:hover { color: #bfa400; transform: scale(1.18);}
     .timer-status-dot {
       display: inline-block;
       width: 16px; height: 16px;
@@ -218,9 +201,16 @@
   <div class="widget-grid" id="timers"></div>
   <script>
     const TIMER_COUNT = 5;
+    const billiardNames = [
+      'Billiard 1',
+      'Billiard 2',
+      'Billiard 3',
+      'Billiard 4',
+      'Billiard 5'
+    ];
     let timers = Array.from({length: TIMER_COUNT}, (_, i) => ({
       id: i,
-      name: `Timer ${i+1}`,
+      name: billiardNames[i],
       state: "stopped",
       startTime: null,
       elapsed: 0,
@@ -245,7 +235,7 @@
         widget.className = 'timer-widget';
         widget.id = `widget-${timer.id}`;
 
-        // Name row with rename icon
+        // Name row (static text)
         const nameRow = document.createElement('div');
         nameRow.className = 'timer-name-row';
 
@@ -254,15 +244,7 @@
         nameSpan.textContent = timer.name;
         nameSpan.setAttribute('data-id', timer.id);
 
-        // Rename button (pencil icon)
-        const renameBtn = document.createElement('button');
-        renameBtn.className = 'rename-btn';
-        renameBtn.title = "Rename";
-        renameBtn.innerHTML = '<i class="fa-solid fa-pencil"></i>';
-        renameBtn.onclick = () => editName(timer.id, nameSpan);
-
         nameRow.appendChild(nameSpan);
-        nameRow.appendChild(renameBtn);
 
         // Controls
         const controls = document.createElement('div');
@@ -357,26 +339,6 @@
       if (changed) updateWidgetDOM(id);
     }
 
-    function editName(id, nameSpan) {
-      nameSpan.contentEditable = true;
-      nameSpan.focus();
-      nameSpan.style.background = '#FFD70022';
-      nameSpan.style.color = '#222';
-      nameSpan.onblur = () => {
-        nameSpan.contentEditable = false;
-        nameSpan.style.background = '';
-        nameSpan.style.color = '#FFD700';
-        timers[id].name = nameSpan.textContent.trim() || `Timer ${id+1}`;
-        nameSpan.textContent = timers[id].name;
-      };
-      nameSpan.onkeydown = (e) => {
-        if (e.key === 'Enter') {
-          e.preventDefault();
-          nameSpan.blur();
-        }
-      };
-    }
-
     function updateWidgetDOM(id) {
       const t = timers[id];
       const ref = timerRefs[id];
@@ -396,7 +358,7 @@
       ref.start.textContent = t.startTime ? new Date(t.startTime).toLocaleTimeString() : '--:--:--';
       // Update elapsed immediately
       ref.elapsed.textContent = formatDuration(t.elapsed);
-      // Update name (if changed outside edit)
+      // Name is static
       ref.nameSpan.textContent = t.name;
     }
 
