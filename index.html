@@ -133,15 +133,21 @@
     }
     .date-time-row {
       display: flex;
-      flex-direction: row;
-      gap: 14px;
-      align-items: center;
+      flex-direction: column;
+      gap: 8px;
+      align-items: flex-start;
       margin-bottom: 2px;
     }
     .date-time-row span {
       display: flex;
       align-items: center;
       gap: 5px;
+    }
+    .duration-row {
+      margin: 7px 0 2px 0;
+      display: flex;
+      align-items: center;
+      gap: 10px;
     }
     .timer-details strong {
       color: #FFD700;
@@ -171,18 +177,24 @@
       h1 { font-size: 1.28em; margin-bottom: 8px;}
       .timer-controls button { font-size: 1.5em; min-width: 46px; min-height: 46px; padding: 9px;}
       .date-time-row { flex-direction: column; align-items: stretch; gap: 7px;}
+      .duration-row { flex-direction: column; align-items: stretch; gap: 7px;}
     }
     @media (max-width: 650px) {
       .widget-grid { grid-template-columns: 1fr; gap: 18px; }
       .timer-widget { padding: 10px 5px;}
       h1 { font-size: 1em; margin-bottom: 4px;}
       .date-time-row { flex-direction: column; align-items: stretch; gap: 7px;}
+      .duration-row { flex-direction: column; align-items: stretch; gap: 7px;}
     }
     .timer-widget.running {
       background: linear-gradient(135deg, #33ff77 0%, #228c4c 100%);
     }
     .timer-widget.paused {
       background: linear-gradient(135deg, #ffe066 0%, #bfa400 100%);
+    }
+    /* RED for ending soon */
+    .timer-widget.ending {
+      background: linear-gradient(135deg, #ff3c3c 0%, #a60000 100%);
     }
   </style>
 </head>
@@ -198,6 +210,7 @@
       'Billiard 4',
       'Billiard 5'
     ];
+    // Add duration property to timers
     let timers = Array.from({length: TIMER_COUNT}, (_, i) => ({
       id: i,
       name: billiardNames[i],
@@ -206,7 +219,8 @@
       elapsed: 0,
       pauseTime: null,
       date: '',
-      time: ''
+      time: '',
+      duration: 60 // default: 1 hr (in minutes)
     }));
 
     const timerRefs = {};
@@ -277,6 +291,25 @@
               <input type="time" id="time-${timer.id}" value="${timer.time}" style="font-size: 1em; padding: 2px 10px; border-radius: 6px; border: 1px solid #FFD700;">
             </span>
           </div>
+          <div class="duration-row">
+            <strong>Duration:</strong>
+            <select id="duration-${timer.id}" style="font-size: 1em; padding: 2px 10px; border-radius: 6px; border: 1px solid #FFD700;">
+              <option value="30">30 mins</option>
+              <option value="60">1 hr</option>
+              <option value="90">1.5 hrs</option>
+              <option value="120">2 hrs</option>
+              <option value="150">2.5 hrs</option>
+              <option value="180">3 hrs</option>
+              <option value="210">3.5 hrs</option>
+              <option value="240">4 hrs</option>
+              <option value="270">4.5 hrs</option>
+              <option value="300">5 hrs</option>
+              <option value="330">5.5 hrs</option>
+              <option value="360">6 hrs</option>
+              <option value="390">6.5 hrs</option>
+              <option value="420">7 hrs</option>
+            </select>
+          </div>
           <span><strong>Start:</strong> <span id="start-${timer.id}">${timer.startTime ? new Date(timer.startTime).toLocaleTimeString() : '--:--:--'}</span></span>
           <span><strong>Elapsed:</strong> <span class="elapsed" id="elapsed-${timer.id}">${formatDuration(timer.elapsed)}</span></span>
         `;
@@ -296,15 +329,20 @@
           start: widget.querySelector(`#start-${timer.id}`),
           elapsed: widget.querySelector(`#elapsed-${timer.id}`),
           dateInput: widget.querySelector(`#date-${timer.id}`),
-          timeInput: widget.querySelector(`#time-${timer.id}`)
+          timeInput: widget.querySelector(`#time-${timer.id}`),
+          durationInput: widget.querySelector(`#duration-${timer.id}`)
         };
 
-        // Editable date/time
+        // Editable date/time/duration
         timerRefs[timer.id].dateInput.addEventListener('change', (e) => {
           timers[timer.id].date = e.target.value;
         });
         timerRefs[timer.id].timeInput.addEventListener('change', (e) => {
           timers[timer.id].time = e.target.value;
+        });
+        timerRefs[timer.id].durationInput.value = timer.duration;
+        timerRefs[timer.id].durationInput.addEventListener('change', (e) => {
+          timers[timer.id].duration = Number(e.target.value);
         });
       });
     }
@@ -345,6 +383,7 @@
         timer.pauseTime = null;
         timer.date = '';
         timer.time = '';
+        timer.duration = 60;
         changed = true;
       }
       if (changed) updateWidgetDOM(id);
@@ -366,10 +405,12 @@
       ref.nameSpan.textContent = t.name;
       if (ref.dateInput) ref.dateInput.value = t.date;
       if (ref.timeInput) ref.timeInput.value = t.time;
+      if (ref.durationInput) ref.durationInput.value = t.duration;
 
       // Set background color based on state
-      ref.widget.classList.remove('running', 'paused');
+      ref.widget.classList.remove('running', 'paused', 'ending');
       if (t.state === 'running') {
+        // Will add ending class in updateElapsedTimes if needed
         ref.widget.classList.add('running');
       } else if (t.state === 'paused') {
         ref.widget.classList.add('paused');
@@ -378,10 +419,21 @@
 
     function updateElapsedTimes() {
       timers.forEach(timer => {
+        const ref = timerRefs[timer.id];
         if (timer.state === 'running') {
           timer.elapsed = Date.now() - timer.startTime;
+          // Check for ending soon condition
+          const durationMs = timer.duration * 60 * 1000;
+          if (durationMs - timer.elapsed <= 5 * 60 * 1000 && timer.elapsed < durationMs) {
+            ref.widget.classList.add('ending');
+            ref.widget.classList.remove('running');
+          } else {
+            ref.widget.classList.remove('ending');
+            ref.widget.classList.add('running');
+          }
+        } else {
+          ref.widget.classList.remove('ending');
         }
-        const ref = timerRefs[timer.id];
         if (ref && ref.elapsed) {
           ref.elapsed.textContent = formatDuration(timer.elapsed);
         }
