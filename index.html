@@ -231,6 +231,7 @@
     const timerRefs = {};
 
     function formatDuration(ms) {
+      ms = Math.max(ms, 0); // Prevent negative durations
       const sec = Math.floor(ms/1000)%60;
       const min = Math.floor(ms/60000)%60;
       const hr = Math.floor(ms/3600000);
