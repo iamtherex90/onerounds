@@ -192,9 +192,15 @@
     .timer-widget.paused {
       background: linear-gradient(135deg, #ffe066 0%, #bfa400 100%);
     }
-    /* RED for ending soon */
     .timer-widget.ending {
       background: linear-gradient(135deg, #ff3c3c 0%, #a60000 100%);
+    }
+    .timer-widget.expired {
+      animation: blink-red 1s linear infinite;
+    }
+    @keyframes blink-red {
+      0%, 100% { background: linear-gradient(135deg, #ff3c3c 0%, #a60000 100%); }
+      50% { background: linear-gradient(135deg, #ffd7d7 0%, #ff3c3c 100%); }
     }
   </style>
 </head>
@@ -210,7 +216,6 @@
       'Billiard 4',
       'Billiard 5'
     ];
-    // Add duration property to timers
     let timers = Array.from({length: TIMER_COUNT}, (_, i) => ({
       id: i,
       name: billiardNames[i],
@@ -220,7 +225,7 @@
       pauseTime: null,
       date: '',
       time: '',
-      duration: 60 // default: 1 hr (in minutes)
+      duration: 60
     }));
 
     const timerRefs = {};
@@ -355,7 +360,7 @@
         // Use current date/time if blank
         let now = new Date();
         let chosenDate = timer.date && timer.date.trim() !== '' ? timer.date : now.toISOString().split('T')[0];
-        let chosenTime = timer.time && timer.time.trim() !== '' ? timer.time : now.toTimeString().slice(0,8);
+        let chosenTime = timer.time && timer.time.trim() !== '' ? timer.time : now.toTimeString().slice(0,5); // Use "HH:MM" only!
         let startDateTime = new Date(`${chosenDate}T${chosenTime}`);
         if (!isNaN(startDateTime.getTime())) {
           timer.startTime = startDateTime.getTime();
@@ -408,9 +413,8 @@
       if (ref.durationInput) ref.durationInput.value = t.duration;
 
       // Set background color based on state
-      ref.widget.classList.remove('running', 'paused', 'ending');
+      ref.widget.classList.remove('running', 'paused', 'ending', 'expired');
       if (t.state === 'running') {
-        // Will add ending class in updateElapsedTimes if needed
         ref.widget.classList.add('running');
       } else if (t.state === 'paused') {
         ref.widget.classList.add('paused');
@@ -422,17 +426,19 @@
         const ref = timerRefs[timer.id];
         if (timer.state === 'running') {
           timer.elapsed = Date.now() - timer.startTime;
-          // Check for ending soon condition
           const durationMs = timer.duration * 60 * 1000;
-          if (durationMs - timer.elapsed <= 5 * 60 * 1000 && timer.elapsed < durationMs) {
+          if (timer.elapsed > durationMs) {
+            ref.widget.classList.add('expired');
+            ref.widget.classList.remove('ending', 'running');
+          } else if (durationMs - timer.elapsed <= 5 * 60 * 1000 && timer.elapsed < durationMs) {
             ref.widget.classList.add('ending');
-            ref.widget.classList.remove('running');
+            ref.widget.classList.remove('running', 'expired');
           } else {
-            ref.widget.classList.remove('ending');
+            ref.widget.classList.remove('ending', 'expired');
             ref.widget.classList.add('running');
           }
         } else {
-          ref.widget.classList.remove('ending');
+          ref.widget.classList.remove('ending', 'expired');
         }
         if (ref && ref.elapsed) {
           ref.elapsed.textContent = formatDuration(timer.elapsed);
