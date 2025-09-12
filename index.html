@@ -353,19 +353,24 @@
       });
     }
 
+    function getLocalDateString(dateObj) {
+      // Returns YYYY-MM-DD in local time
+      return `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
+    }
+
     function updateTimerState(id, action) {
       const timer = timers[id];
       let changed = false;
       if (action === 'start') {
         timer.state = 'running';
         let now = new Date();
-        // If date/time fields are blank, set them to now
+        // If date/time fields are blank, set them to now (using local time, not UTC!)
         if (!timer.date || timer.date.trim() === '') {
-          timer.date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+          timer.date = getLocalDateString(now);
           timerRefs[id].dateInput.value = timer.date;
         }
         if (!timer.time || timer.time.trim() === '') {
-          timer.time = now.toTimeString().slice(0,5); // HH:MM
+          timer.time = now.toTimeString().slice(0,5); // HH:MM in local time
           timerRefs[id].timeInput.value = timer.time;
         }
         let [year, month, day] = timer.date.split('-').map(Number);
