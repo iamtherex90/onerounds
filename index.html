@@ -359,11 +359,17 @@
       if (action === 'start') {
         timer.state = 'running';
         let now = new Date();
-        let chosenDate = timer.date && timer.date.trim() !== '' ? timer.date : now.toISOString().split('T')[0];
-        let chosenTime = timer.time && timer.time.trim() !== '' ? timer.time : now.toTimeString().slice(0,5); // "HH:MM"
-        // Parse date and time as local, not UTC
-        let [year, month, day] = chosenDate.split('-').map(Number);
-        let [hour, minute] = chosenTime.split(':').map(Number);
+        // If date/time fields are blank, set them to now
+        if (!timer.date || timer.date.trim() === '') {
+          timer.date = now.toISOString().split('T')[0]; // YYYY-MM-DD
+          timerRefs[id].dateInput.value = timer.date;
+        }
+        if (!timer.time || timer.time.trim() === '') {
+          timer.time = now.toTimeString().slice(0,5); // HH:MM
+          timerRefs[id].timeInput.value = timer.time;
+        }
+        let [year, month, day] = timer.date.split('-').map(Number);
+        let [hour, minute] = timer.time.split(':').map(Number);
         let startDateTime = new Date(year, month - 1, day, hour, minute);
         timer.startTime = startDateTime.getTime();
         timer.elapsed = 0;
