@@ -133,9 +133,9 @@
     }
     .date-time-row {
       display: flex;
-      flex-direction: row;
-      gap: 14px;
-      align-items: center;
+      flex-direction: column;
+      gap: 7px;
+      align-items: stretch;
       margin-bottom: 2px;
     }
     .date-time-row span {
@@ -170,13 +170,11 @@
       .timer-widget { padding: 14px 7px;}
       h1 { font-size: 1.28em; margin-bottom: 8px;}
       .timer-controls button { font-size: 1.5em; min-width: 46px; min-height: 46px; padding: 9px;}
-      .date-time-row { flex-direction: column; align-items: stretch; gap: 7px;}
     }
     @media (max-width: 650px) {
       .widget-grid { grid-template-columns: 1fr; gap: 18px; }
       .timer-widget { padding: 10px 5px;}
       h1 { font-size: 1em; margin-bottom: 4px;}
-      .date-time-row { flex-direction: column; align-items: stretch; gap: 7px;}
     }
     .timer-widget.running {
       background: linear-gradient(135deg, #33ff77 0%, #228c4c 100%);
