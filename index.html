@@ -42,6 +42,7 @@
       min-width: 0;
       animation: fadeIn 0.7s;
       border: 2px solid #FFD700;
+      overflow: hidden;
     }
     @keyframes fadeIn {
       from { opacity: 0; transform: translateY(20px);}
@@ -142,6 +143,21 @@
       display: flex;
       align-items: center;
       gap: 5px;
+      min-width: 0;
+      flex: 1;
+    }
+    .date-time-row input[type="date"],
+    .date-time-row input[type="time"] {
+      font-size: 1em;
+      padding: 2px 10px;
+      border-radius: 6px;
+      border: 1px solid #FFD700;
+      background: white;
+      color: #222;
+      box-sizing: border-box;
+      max-width: 100%;
+      min-width: 0;
+      flex-shrink: 1;
     }
     .timer-details strong {
       color: #FFD700;
@@ -270,11 +286,11 @@
           <div class="date-time-row">
             <span>
               <strong>Date:</strong>
-              <input type="date" id="date-${timer.id}" value="${timer.date}" style="font-size: 1em; padding: 2px 10px; border-radius: 6px; border: 1px solid #FFD700;">
+              <input type="date" id="date-${timer.id}" value="${timer.date}">
             </span>
             <span>
               <strong>Time:</strong>
-              <input type="time" id="time-${timer.id}" value="${timer.time}" style="font-size: 1em; padding: 2px 10px; border-radius: 6px; border: 1px solid #FFD700;">
+              <input type="time" id="time-${timer.id}" value="${timer.time}">
             </span>
           </div>
           <span><strong>Start:</strong> <span id="start-${timer.id}">${timer.startTime ? new Date(timer.startTime).toLocaleTimeString() : '--:--:--'}</span></span>
