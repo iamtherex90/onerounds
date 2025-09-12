@@ -1,9 +1,403 @@
-.timer-widget {
-    /* existing styles */
-}
-.timer-widget.running {
-  background: linear-gradient(135deg, #33ff77 0%, #228c4c 100%);
-}
-.timer-widget.paused {
-  background: linear-gradient(135deg, #ffe066 0%, #bfa400 100%);
-}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Timer Widget</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <style>
+    body {
+      background: radial-gradient(circle at 20% 30%, #FFD70022 0%, #f9fafc 60%);
+      min-height: 100vh;
+      margin: 0;
+      font-family: 'Inter', Arial, sans-serif;
+    }
+    h1 {
+      text-align: center;
+      font-size: 1.7em;
+      color: #222;
+      margin: 38px 0 18px 0;
+      letter-spacing: 1px;
+      font-weight: bold;
+    }
+    .widget-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 28px;
+      max-width: 920px;
+      margin: 0 auto;
+      padding: 0 16px 44px 16px;
+    }
+    .timer-widget {
+      background: rgba(34,34,34,0.97);
+      border-radius: 18px;
+      box-shadow: 0 5px 20px 0 rgba(34,34,34,0.13);
+      padding: 18px 16px 14px 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      position: relative;
+      min-width: 0;
+      animation: fadeIn 0.7s;
+      border: 2px solid #FFD700;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px);}
+      to   { opacity: 1; transform: translateY(0);}
+    }
+    .timer-widget:hover {
+      box-shadow: 0 6px 36px 0 #FFD70055;
+      transform: scale(1.03);
+    }
+    .timer-name-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+      width: 100%;
+    }
+    .timer-name {
+      font-size: 1.24em;
+      font-weight: 700;
+      color: #FFD700;
+      background: none;
+      padding: 4px 10px;
+      border-radius: 7px;
+      outline: none;
+      border: none;
+      min-width: 70px;
+      flex: 1;
+      user-select: none;
+      max-width: 150px;
+    }
+    .timer-status-dot {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      vertical-align: middle;
+      margin-right: 5px;
+      margin-bottom: 1px;
+      box-shadow: 0 1px 3px #FFD70088;
+      animation: pulseDot 1.5s infinite;
+    }
+    @keyframes pulseDot {
+      0% { box-shadow: 0 0 0 0 #FFD70033; }
+      50% { box-shadow: 0 0 14px 6px #FFD70044; }
+      100% { box-shadow: 0 0 0 0 #FFD70033; }
+    }
+    .dot-running  { background: #FFD700;}
+    .dot-paused   { background: #bfa400;}
+    .dot-stopped  { background: #444;}
+    .timer-controls {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 13px;
+      align-items: center;
+      justify-content: center;
+    }
+    .timer-controls button {
+      background: #FFD700;
+      border: 3px solid #FFD700;
+      color: #222;
+      font-size: 2.2em;
+      cursor: pointer;
+      transition: color 0.18s, transform 0.18s, background 0.18s, border-color 0.18s;
+      outline: none;
+      border-radius: 50%;
+      padding: 18px;
+      position: relative;
+      box-shadow: 0 2px 8px #FFD70033;
+      font-family: inherit;
+      font-weight: bold;
+      min-width: 64px;
+      min-height: 64px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .timer-controls button:disabled {
+      background: #ddd;
+      border-color: #ddd;
+      color: #bbb;
+      cursor: not-allowed;
+    }
+    .timer-controls button:not(:disabled):hover {
+      color: #FFD700;
+      background: #222;
+      border-color: #FFD700;
+      transform: scale(1.14);
+    }
+    .timer-controls button .fa {
+      pointer-events: none;
+    }
+    /* Tooltip on button hover REMOVED */
+    /* .timer-controls button[title]:hover:after { ... } */
+    .timer-details {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 2px;
+      font-size: 1.14em;
+      color: #FFD700;
+      align-items: flex-start;
+      margin-bottom: 2px;
+      font-weight: 600;
+    }
+    .timer-details strong {
+      color: #FFD700;
+      font-weight: 800;
+      margin-right: 2px;
+      text-shadow: 0 1px 2px #2228;
+    }
+    .timer-details .elapsed {
+      font-size: 1.26em;
+      font-family: 'Fira Mono', 'SFMono-Regular', monospace;
+      background: #FFD70022;
+      padding: 4px 18px;
+      border-radius: 10px;
+      color: #FFD700;
+      font-weight: 900;
+      margin-left: 2px;
+      letter-spacing: 1px;
+      border: 2px solid #FFD70044;
+      min-width: 90px;
+      text-align: center;
+      display: inline-block;
+      box-shadow: 0 1px 7px #FFD70033;
+    }
+    @media (max-width: 900px) {
+      .widget-grid { grid-template-columns: 1fr 1fr; gap: 18px; }
+      .timer-widget { padding: 14px 7px;}
+      h1 { font-size: 1.28em; margin-bottom: 8px;}
+      .timer-controls button { font-size: 1.5em; min-width: 46px; min-height: 46px; padding: 9px;}
+    }
+    @media (max-width: 650px) {
+      .widget-grid { grid-template-columns: 1fr; gap: 18px; }
+      .timer-widget { padding: 10px 5px;}
+      h1 { font-size: 1em; margin-bottom: 4px;}
+    }
+    .timer-widget.running {
+      background: linear-gradient(135deg, #33ff77 0%, #228c4c 100%);
+    }
+    .timer-widget.paused {
+      background: linear-gradient(135deg, #ffe066 0%, #bfa400 100%);
+    }
+  </style>
+</head>
+<body>
+  <h1><i class="fa-solid fa-stopwatch"></i> One Rounds Timer</h1>
+  <div class="widget-grid" id="timers"></div>
+  <script>
+    const TIMER_COUNT = 5;
+    const billiardNames = [
+      'Billiard 1',
+      'Billiard 2',
+      'Billiard 3',
+      'Billiard 4',
+      'Billiard 5'
+    ];
+    let timers = Array.from({length: TIMER_COUNT}, (_, i) => ({
+      id: i,
+      name: billiardNames[i],
+      state: "stopped",
+      startTime: null,
+      elapsed: 0,
+      pauseTime: null,
+      date: '',
+      time: ''
+    }));
+
+    const timerRefs = {};
+
+    function formatDuration(ms) {
+      const sec = Math.floor(ms/1000)%60;
+      const min = Math.floor(ms/60000)%60;
+      const hr = Math.floor(ms/3600000);
+      return `${hr.toString().padStart(2,"0")}:${min.toString().padStart(2,"0")}:${sec.toString().padStart(2,"0")}`;
+    }
+
+    function renderTimers() {
+      const grid = document.getElementById('timers');
+      grid.innerHTML = '';
+      timers.forEach(timer => {
+        const widget = document.createElement('div');
+        widget.className = 'timer-widget';
+        widget.id = `widget-${timer.id}`;
+
+        // Name row
+        const nameRow = document.createElement('div');
+        nameRow.className = 'timer-name-row';
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'timer-name';
+        nameSpan.textContent = timer.name;
+        nameSpan.setAttribute('data-id', timer.id);
+        nameRow.appendChild(nameSpan);
+
+        // Controls
+        const controls = document.createElement('div');
+        controls.className = 'timer-controls';
+
+        const startBtn = document.createElement('button');
+        startBtn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+        startBtn.title = timer.state === 'stopped' ? 'Start' : 'Restart';
+        startBtn.disabled = (timer.state === 'running');
+        startBtn.onclick = () => updateTimerState(timer.id, 'start');
+
+        const pauseBtn = document.createElement('button');
+        pauseBtn.innerHTML = timer.state === 'paused'
+          ? '<i class="fa-solid fa-play"></i>'
+          : '<i class="fa-solid fa-pause"></i>';
+        pauseBtn.title = timer.state === 'paused' ? 'Resume' : 'Pause';
+        pauseBtn.disabled = (timer.state!=='running' && timer.state!=='paused');
+        pauseBtn.onclick = () => updateTimerState(timer.id, 'pause');
+
+        const stopBtn = document.createElement('button');
+        stopBtn.innerHTML = '<i class="fa-solid fa-stop"></i>';
+        stopBtn.title = 'Stop/Reset';
+        stopBtn.disabled = (timer.state === 'stopped');
+        stopBtn.onclick = () => updateTimerState(timer.id, 'stop');
+
+        controls.appendChild(startBtn);
+        controls.appendChild(pauseBtn);
+        controls.appendChild(stopBtn);
+
+        // Status dot
+        const dot = document.createElement('span');
+        dot.className = 'timer-status-dot dot-' + timer.state;
+        dot.id = `dot-${timer.id}`;
+
+        // Timer details
+        const details = document.createElement('div');
+        details.className = 'timer-details';
+        details.innerHTML = `
+          <span id="status-${timer.id}">${dot.outerHTML}<strong>Status:</strong> ${timer.state[0].toUpperCase()+timer.state.slice(1)}</span>
+          <span>
+            <strong>Date:</strong>
+            <input type="date" id="date-${timer.id}" value="${timer.date}" style="font-size: 1em; padding: 2px 10px; border-radius: 6px; border: 1px solid #FFD700;">
+          </span>
+          <span>
+            <strong>Time:</strong>
+            <input type="time" id="time-${timer.id}" value="${timer.time}" style="font-size: 1em; padding: 2px 10px; border-radius: 6px; border: 1px solid #FFD700;">
+          </span>
+          <span><strong>Start:</strong> <span id="start-${timer.id}">${timer.startTime ? new Date(timer.startTime).toLocaleTimeString() : '--:--:--'}</span></span>
+          <span><strong>Elapsed:</strong> <span class="elapsed" id="elapsed-${timer.id}">${formatDuration(timer.elapsed)}</span></span>
+        `;
+
+        widget.appendChild(nameRow);
+        widget.appendChild(controls);
+        widget.appendChild(details);
+
+        grid.appendChild(widget);
+
+        timerRefs[timer.id] = {
+          widget,
+          nameSpan,
+          startBtn,
+          pauseBtn,
+          stopBtn,
+          dot: widget.querySelector(`#dot-${timer.id}`),
+          status: widget.querySelector(`#status-${timer.id}`),
+          start: widget.querySelector(`#start-${timer.id}`),
+          elapsed: widget.querySelector(`#elapsed-${timer.id}`),
+          dateInput: widget.querySelector(`#date-${timer.id}`),
+          timeInput: widget.querySelector(`#time-${timer.id}`)
+        };
+
+        // Editable date/time
+        timerRefs[timer.id].dateInput.addEventListener('change', (e) => {
+          timers[timer.id].date = e.target.value;
+        });
+        timerRefs[timer.id].timeInput.addEventListener('change', (e) => {
+          timers[timer.id].time = e.target.value;
+        });
+      });
+    }
+
+    function updateTimerState(id, action) {
+      const timer = timers[id];
+      let changed = false;
+      if (action === 'start') {
+        timer.state = 'running';
+        // Use current date/time if blank
+        let now = new Date();
+        let chosenDate = timer.date && timer.date.trim() !== '' ? timer.date : now.toISOString().split('T')[0];
+        let chosenTime = timer.time && timer.time.trim() !== '' ? timer.time : now.toTimeString().slice(0,8);
+        let startDateTime = new Date(`${chosenDate}T${chosenTime}`);
+        if (!isNaN(startDateTime.getTime())) {
+          timer.startTime = startDateTime.getTime();
+        } else {
+          timer.startTime = Date.now();
+        }
+        timer.elapsed = 0;
+        timer.pauseTime = null;
+        changed = true;
+      } else if (action === 'pause') {
+        if (timer.state === 'running') {
+          timer.state = 'paused';
+          timer.pauseTime = Date.now();
+          changed = true;
+        } else if (timer.state === 'paused') {
+          timer.state = 'running';
+          if (timer.pauseTime) timer.startTime += (Date.now() - timer.pauseTime);
+          timer.pauseTime = null;
+          changed = true;
+        }
+      } else if (action === 'stop') {
+        timer.state = 'stopped';
+        timer.startTime = null;
+        timer.elapsed = 0;
+        timer.pauseTime = null;
+        timer.date = '';
+        timer.time = '';
+        changed = true;
+      }
+      if (changed) updateWidgetDOM(id);
+    }
+
+    function updateWidgetDOM(id) {
+      const t = timers[id];
+      const ref = timerRefs[id];
+      ref.startBtn.title = t.state === 'stopped' ? 'Start' : 'Restart';
+      ref.startBtn.disabled = (t.state === 'running');
+      ref.pauseBtn.innerHTML = t.state === 'paused'
+        ? '<i class="fa-solid fa-play"></i>'
+        : '<i class="fa-solid fa-pause"></i>';
+      ref.pauseBtn.title = t.state === 'paused' ? 'Resume' : 'Pause';
+      ref.pauseBtn.disabled = (t.state!=='running' && t.state!=='paused');
+      ref.stopBtn.disabled = (t.state === 'stopped');
+      ref.dot.className = 'timer-status-dot dot-' + t.state;
+      ref.status.innerHTML = `${ref.dot.outerHTML}<strong>Status:</strong> ${t.state[0].toUpperCase()+t.state.slice(1)}`;
+      ref.start.textContent = t.startTime ? new Date(t.startTime).toLocaleTimeString() : '--:--:--';
+      ref.elapsed.textContent = formatDuration(t.elapsed);
+      ref.nameSpan.textContent = t.name;
+      if (ref.dateInput) ref.dateInput.value = t.date;
+      if (ref.timeInput) ref.timeInput.value = t.time;
+
+      // Set background color based on state
+      ref.widget.classList.remove('running', 'paused');
+      if (t.state === 'running') {
+        ref.widget.classList.add('running');
+      } else if (t.state === 'paused') {
+        ref.widget.classList.add('paused');
+      }
+    }
+
+    function updateElapsedTimes() {
+      timers.forEach(timer => {
+        if (timer.state === 'running') {
+          timer.elapsed = Date.now() - timer.startTime;
+        }
+        const ref = timerRefs[timer.id];
+        if (ref && ref.elapsed) {
+          ref.elapsed.textContent = formatDuration(timer.elapsed);
+        }
+      });
+    }
+
+    renderTimers();
+    setInterval(updateElapsedTimes, 1000);
+  </script>
+</body>
+</html>
