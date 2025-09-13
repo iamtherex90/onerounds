@@ -432,7 +432,7 @@
         let [year, month, day] = timer.date.split('-').map(Number);
         let [hour, minute] = timer.time.split(':').map(Number);
         let startDateTime = new Date(year, month - 1, day, hour, minute);
-        timer.startTime = startDateTime.getTime();
+        timer.startTime = Date.now() - 1000; // Start timer at exactly 1 second elapsed
         timer.elapsed = 0;
         timer.pauseTime = null;
         timer.alarmTriggered = false;
