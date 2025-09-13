@@ -95,6 +95,13 @@
       display: inline-block;
       box-shadow: 0 1px 7px #FFD70033;
       margin: 0 auto;
+      transition: color 0.2s;
+    }
+    .timer-widget.running .elapsed,
+    .timer-widget.paused .elapsed,
+    .timer-widget.ending .elapsed,
+    .timer-widget.expired .elapsed {
+      color: #111 !important;
     }
     .timer-controls {
       display: flex;
@@ -242,7 +249,7 @@
       pauseTime: null,
       date: '',
       time: '',
-      duration: 60, // 1 hour is default
+      duration: 60,
       alarmTriggered: false
     }));
 
@@ -265,7 +272,6 @@
         widget.id = `widget-${timer.id}`;
         widget.style.position = "relative";
 
-        // Name row
         const nameRow = document.createElement('div');
         nameRow.className = 'timer-name-row';
         const nameSpan = document.createElement('span');
@@ -274,40 +280,28 @@
         nameSpan.setAttribute('data-id', timer.id);
         nameRow.appendChild(nameSpan);
 
-        // Timer above controls, centered
         const timerAboveControls = document.createElement('div');
         timerAboveControls.className = 'timer-above-controls';
         timerAboveControls.innerHTML = `<span class="elapsed" id="elapsed-${timer.id}">${formatDuration(timer.elapsed)}</span>`;
 
-        // Controls
         const controls = document.createElement('div');
         controls.className = 'timer-controls';
 
-        const startBtn = document.createElement('button');
-        startBtn.innerHTML = `<i class="fa-solid fa-play"></i>`;
-        startBtn.title = timer.state === 'stopped' ? 'Start' : 'Restart';
-        startBtn.disabled = (timer.state === 'running');
-        startBtn.onclick = () => updateTimerState(timer.id, 'start');
-
-        const pauseBtn = document.createElement('button');
-        pauseBtn.innerHTML = timer.state === 'paused'
-          ? '<i class="fa-solid fa-play"></i>'
-          : '<i class="fa-solid fa-pause"></i>';
-        pauseBtn.title = timer.state === 'paused' ? 'Resume' : 'Pause';
-        pauseBtn.disabled = (timer.state!=='running' && timer.state!=='paused');
-        pauseBtn.onclick = () => updateTimerState(timer.id, 'pause');
+        const startPauseBtn = document.createElement('button');
+        startPauseBtn.id = `startpause-btn-${timer.id}`;
+        startPauseBtn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+        startPauseBtn.title = 'Start';
+        startPauseBtn.disabled = false;
+        startPauseBtn.onclick = () => handleStartPause(timer.id);
+        controls.appendChild(startPauseBtn);
 
         const stopBtn = document.createElement('button');
         stopBtn.innerHTML = '<i class="fa-solid fa-stop"></i>';
         stopBtn.title = 'Stop/Reset';
         stopBtn.disabled = (timer.state === 'stopped');
         stopBtn.onclick = () => updateTimerState(timer.id, 'stop');
-
-        controls.appendChild(startBtn);
-        controls.appendChild(pauseBtn);
         controls.appendChild(stopBtn);
 
-        // Timer details
         const details = document.createElement('div');
         details.className = 'timer-details';
         details.innerHTML = `
@@ -353,8 +347,7 @@
         timerRefs[timer.id] = {
           widget,
           nameSpan,
-          startBtn,
-          pauseBtn,
+          startPauseBtn,
           stopBtn,
           elapsed: widget.querySelector(`#elapsed-${timer.id}`),
           dateInput: widget.querySelector(`#date-${timer.id}`),
@@ -365,9 +358,11 @@
         // Editable date/time/duration
         timerRefs[timer.id].dateInput.addEventListener('change', (e) => {
           timers[timer.id].date = e.target.value;
+          updateElapsedFromDateTime(timer.id);
         });
         timerRefs[timer.id].timeInput.addEventListener('change', (e) => {
           timers[timer.id].time = e.target.value;
+          updateElapsedFromDateTime(timer.id);
         });
         timerRefs[timer.id].durationInput.value = timer.duration === "open" ? "open" : timer.duration;
         timerRefs[timer.id].durationInput.addEventListener('change', (e) => {
@@ -378,6 +373,26 @@
           }
         });
       });
+    }
+
+    function updateElapsedFromDateTime(id) {
+      const timer = timers[id];
+      if (timer.date && timer.time) {
+        let [year, month, day] = timer.date.split('-').map(Number);
+        let [hour, minute] = timer.time.split(':').map(Number);
+        let selectedDateTime = new Date(year, month - 1, day, hour, minute);
+        // If running, paused, or stopped, update startTime and elapsed so timer reflects the selected date/time
+        timer.startTime = selectedDateTime.getTime();
+        if (timer.state === 'running') {
+          timer.elapsed = Date.now() - timer.startTime;
+        } else if (timer.state === 'paused') {
+          // Keep the elapsed as it was (paused value), so update only if paused after changing date/time
+          timer.elapsed = timer.elapsed; // Do nothing, keep paused value
+        } else {
+          timer.elapsed = 0;
+        }
+        updateWidgetDOM(id);
+      }
     }
 
     function getLocalDateString(dateObj) {
@@ -402,6 +417,17 @@
       Notification.requestPermission();
     }
 
+    function handleStartPause(id) {
+      const timer = timers[id];
+      if (timer.state === 'stopped') {
+        updateTimerState(id, 'start');
+      } else if (timer.state === 'running') {
+        updateTimerState(id, 'pause');
+      } else if (timer.state === 'paused') {
+        updateTimerState(id, 'pause');
+      }
+    }
+
     function updateTimerState(id, action) {
       const timer = timers[id];
       let changed = false;
@@ -419,18 +445,17 @@
         let [year, month, day] = timer.date.split('-').map(Number);
         let [hour, minute] = timer.time.split(':').map(Number);
         let startDateTime = new Date(year, month - 1, day, hour, minute);
-        // Set startTime so that elapsed is 1000ms at the time of starting
-        timer.startTime = Date.now() - 1000;
+        timer.startTime = Date.now() - 1000; // always start at 00:00:01
         timer.elapsed = 1000;
         timer.pauseTime = null;
         timer.alarmTriggered = false;
         changed = true;
-        // Update display immediately so it shows 00:00:01
         updateWidgetDOM(id);
       } else if (action === 'pause') {
         if (timer.state === 'running') {
           timer.state = 'paused';
           timer.pauseTime = Date.now();
+          timer.elapsed = Date.now() - timer.startTime; // freeze elapsed at pause
           changed = true;
         } else if (timer.state === 'paused') {
           timer.state = 'running';
@@ -455,19 +480,31 @@
     function updateWidgetDOM(id) {
       const t = timers[id];
       const ref = timerRefs[id];
-      ref.startBtn.title = t.state === 'stopped' ? 'Start' : 'Restart';
-      ref.startBtn.disabled = (t.state === 'running');
-      ref.pauseBtn.innerHTML = t.state === 'paused'
-        ? '<i class="fa-solid fa-play"></i>'
-        : '<i class="fa-solid fa-pause"></i>';
-      ref.pauseBtn.title = t.state === 'paused' ? 'Resume' : 'Pause';
-      ref.pauseBtn.disabled = (t.state!=='running' && t.state!=='paused');
+      if (t.state === 'stopped') {
+        ref.startPauseBtn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+        ref.startPauseBtn.title = 'Start';
+        ref.startPauseBtn.disabled = false;
+      } else if (t.state === 'running') {
+        ref.startPauseBtn.innerHTML = `<i class="fa-solid fa-pause"></i>`;
+        ref.startPauseBtn.title = 'Pause';
+        ref.startPauseBtn.disabled = false;
+      } else if (t.state === 'paused') {
+        ref.startPauseBtn.innerHTML = `<i class="fa-solid fa-play"></i>`;
+        ref.startPauseBtn.title = 'Resume';
+        ref.startPauseBtn.disabled = false;
+      }
       ref.stopBtn.disabled = (t.state === 'stopped');
       ref.nameSpan.textContent = t.name;
       if (ref.dateInput) ref.dateInput.value = t.date;
       if (ref.timeInput) ref.timeInput.value = t.time;
       if (ref.durationInput) ref.durationInput.value = t.duration === "open" ? "open" : t.duration;
-      if (ref.elapsed) ref.elapsed.textContent = formatDuration(t.elapsed);
+      if (ref.elapsed) {
+        if (t.state === 'stopped') {
+          ref.elapsed.textContent = formatDuration(0);
+        } else {
+          ref.elapsed.textContent = formatDuration(t.elapsed);
+        }
+      }
 
       ref.widget.classList.remove('running', 'paused', 'ending', 'expired');
       if (t.state === 'running') {
@@ -504,12 +541,19 @@
               timer.alarmTriggered = false;
             }
           }
+        } else if (timer.state === 'paused') {
+          // Do nothing, keep elapsed frozen
         } else {
           ref.widget.classList.remove('ending', 'expired');
           timer.alarmTriggered = false;
+          timer.elapsed = 0;
         }
         if (ref && ref.elapsed) {
-          ref.elapsed.textContent = formatDuration(timer.elapsed);
+          if (timer.state === 'stopped') {
+            ref.elapsed.textContent = formatDuration(0);
+          } else {
+            ref.elapsed.textContent = formatDuration(timer.elapsed);
+          }
         }
       });
     }
