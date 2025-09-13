@@ -331,7 +331,6 @@
               <option value="420">7 hrs</option>
             </select>
           </div>
-          <span><strong>Start:</strong> <span id="start-${timer.id}">${timer.startTime ? new Date(timer.startTime).toLocaleTimeString() : '--:--:--'}</span></span>
           <span><strong>Elapsed:</strong> <span class="elapsed" id="elapsed-${timer.id}">${formatDuration(timer.elapsed)}</span></span>
         `;
 
@@ -347,7 +346,6 @@
           startBtn,
           pauseBtn,
           stopBtn,
-          start: widget.querySelector(`#start-${timer.id}`),
           elapsed: widget.querySelector(`#elapsed-${timer.id}`),
           dateInput: widget.querySelector(`#date-${timer.id}`),
           timeInput: widget.querySelector(`#time-${timer.id}`),
@@ -458,12 +456,11 @@
       ref.pauseBtn.title = t.state === 'paused' ? 'Resume' : 'Pause';
       ref.pauseBtn.disabled = (t.state!=='running' && t.state!=='paused');
       ref.stopBtn.disabled = (t.state === 'stopped');
-      ref.start.textContent = t.startTime ? new Date(t.startTime).toLocaleTimeString() : '--:--:--';
-      ref.elapsed.textContent = formatDuration(t.elapsed);
       ref.nameSpan.textContent = t.name;
       if (ref.dateInput) ref.dateInput.value = t.date;
       if (ref.timeInput) ref.timeInput.value = t.time;
       if (ref.durationInput) ref.durationInput.value = t.duration === "open" ? "open" : t.duration;
+      if (ref.elapsed) ref.elapsed.textContent = formatDuration(t.elapsed);
 
       // Set background color based on state
       ref.widget.classList.remove('running', 'paused', 'ending', 'expired');
