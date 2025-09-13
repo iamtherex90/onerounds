@@ -34,7 +34,7 @@
       background: rgba(34,34,34,0.97);
       border-radius: 18px;
       box-shadow: 0 5px 20px 0 rgba(34,34,34,0.13);
-      padding: 18px 16px 34px 16px; /* Increased bottom padding */
+      padding: 18px 16px 34px 16px;
       display: flex;
       flex-direction: column;
       align-items: stretch;
@@ -72,13 +72,6 @@
       user-select: none;
       max-width: 150px;
     }
-    .timer-status-dot {
-      display: none;
-    }
-    .dot-running  { background: #FFD700;}
-    .dot-paused   { background: #bfa400;}
-    .dot-stopped  { background: #444;}
-    /* Timer above controls, centered, and spaced */
     .timer-above-controls {
       width: 100%;
       display: flex;
@@ -388,28 +381,23 @@
     }
 
     function getLocalDateString(dateObj) {
-      // Returns YYYY-MM-DD in local time
       return `${dateObj.getFullYear()}-${String(dateObj.getMonth()+1).padStart(2,'0')}-${String(dateObj.getDate()).padStart(2,'0')}`;
     }
 
     function triggerAlarm(timerId) {
-      // Visual shake
       const widget = timerRefs[timerId].widget;
       widget.classList.add('alarm');
       setTimeout(() => widget.classList.remove('alarm'), 1000);
 
-      // Play sound
       const audio = document.getElementById('alarm-audio');
-      audio.currentTime = 0; // rewind to start
+      audio.currentTime = 0;
       audio.play();
 
-      // Notification (if permission)
       if ("Notification" in window && Notification.permission === "granted") {
         new Notification("Timer Finished!", { body: timers[timerId].name + " timer is up." });
       }
     }
 
-    // Request permission for notifications when page loads
     if ("Notification" in window && Notification.permission !== "granted") {
       Notification.requestPermission();
     }
@@ -420,23 +408,25 @@
       if (action === 'start') {
         timer.state = 'running';
         let now = new Date();
-        // If date/time fields are blank, set them to now (using local time, not UTC!)
         if (!timer.date || timer.date.trim() === '') {
           timer.date = getLocalDateString(now);
           timerRefs[id].dateInput.value = timer.date;
         }
         if (!timer.time || timer.time.trim() === '') {
-          timer.time = now.toTimeString().slice(0,5); // HH:MM in local time
+          timer.time = now.toTimeString().slice(0,5);
           timerRefs[id].timeInput.value = timer.time;
         }
         let [year, month, day] = timer.date.split('-').map(Number);
         let [hour, minute] = timer.time.split(':').map(Number);
         let startDateTime = new Date(year, month - 1, day, hour, minute);
-        timer.startTime = startDateTime.getTime();
-        timer.elapsed = 0;
+        // Set startTime so that elapsed is 1000ms at the time of starting
+        timer.startTime = Date.now() - 1000;
+        timer.elapsed = 1000;
         timer.pauseTime = null;
         timer.alarmTriggered = false;
         changed = true;
+        // Update display immediately so it shows 00:00:01
+        updateWidgetDOM(id);
       } else if (action === 'pause') {
         if (timer.state === 'running') {
           timer.state = 'paused';
@@ -479,7 +469,6 @@
       if (ref.durationInput) ref.durationInput.value = t.duration === "open" ? "open" : t.duration;
       if (ref.elapsed) ref.elapsed.textContent = formatDuration(t.elapsed);
 
-      // Set background color based on state
       ref.widget.classList.remove('running', 'paused', 'ending', 'expired');
       if (t.state === 'running') {
         ref.widget.classList.add('running');
@@ -492,8 +481,7 @@
       timers.forEach(timer => {
         const ref = timerRefs[timer.id];
         if (timer.state === 'running') {
-          timer.elapsed = Date.now() - timer.startTime;
-          // If duration is "open", no limit, no ending/expired/alarm
+          timer.elapsed = Math.max(Date.now() - timer.startTime, 1000);
           if (timer.duration === "open") {
             ref.widget.classList.remove('ending', 'expired');
             timer.alarmTriggered = false;
